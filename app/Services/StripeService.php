@@ -10,11 +10,8 @@ class StripeService
     use ConsumesExternalServices;
 
     protected $baseUri;
-
     protected $key;
-
     protected $secret;
-
     protected $plans;
 
     public function __construct()

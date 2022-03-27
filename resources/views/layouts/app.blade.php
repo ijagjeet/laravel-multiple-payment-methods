@@ -18,6 +18,7 @@
 
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">
 
+    {{--giving us the possibility to add dynamically styles or scripts as we may need--}}
     @stack('styles')
 </head>
 <body>
@@ -84,8 +85,11 @@
 
         <main class="py-4">
             <div class="container">
+
+                {{--Adding components to display the messages from the payment platform--}}
                 @if (isset($errors) && $errors->any())
                     <div class="alert alert-danger" role="alert">
+                        {{--A list of error elements--}}
                         <ul>
                             @foreach ($errors->all() as $error)
                                 <li>{{  $error }}</li>
@@ -105,6 +109,7 @@
                         {{ session('status') }}
                     </div>
                 @endif
+
             </div>
 
             @yield('content')
@@ -120,6 +125,7 @@
 
     <script src="{{ asset('js/app.js') }}"></script>
 
+    {{--giving us the possibility to add dynamically styles or scripts as we may need--}}
     @stack('scripts')
 </body>
 </html>

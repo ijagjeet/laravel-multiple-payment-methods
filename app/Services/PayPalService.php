@@ -10,11 +10,8 @@ class PayPalService
     use ConsumesExternalServices;
 
     protected $baseUri;
-
     protected $clientId;
-
     protected $clientSecret;
-
     protected $plans;
 
     public function __construct()
@@ -25,9 +22,11 @@ class PayPalService
         $this->plans = config('services.paypal.plans');
     }
 
-    public function resolveAuthorization(&$queryParams, &$formParams, &$headers)
+    public function resolveAccessToken()
     {
-        $headers['Authorization'] = $this->resolveAccessToken();
+        $credentials = base64_encode("{$this->clientId}:{$this->clientSecret}");
+
+        return "Basic {$credentials}";//returning a basic token
     }
 
     public function decodeResponse($response)
@@ -35,12 +34,18 @@ class PayPalService
         return json_decode($response);
     }
 
-    public function resolveAccessToken()
+    /*
+     * we need to pass them by reference.
+        Basically, what we are doing with this is say: Any change that you may here inside the "resolveAuthorization" method for this, or this, or this is
+        going to be automatically be reflected after this call.
+    So, if we add a header in the "resolveAuthorization" of the PayPal service, that header is going to be reflected
+    in the list of headers that we'll receive and it's going to be sent in the request.
+     * */
+    public function resolveAuthorization(&$queryParams, &$formParams, &$headers)
     {
-        $credentials = base64_encode("{$this->clientId}:{$this->clientSecret}");
-
-        return "Basic {$credentials}";
+        $headers['Authorization'] = $this->resolveAccessToken();
     }
+
 
     public function handlePayment(Request $request)
     {
@@ -50,7 +55,7 @@ class PayPalService
 
         $approve = $orderLinks->where('rel', 'approve')->first();
 
-        session()->put('approvalId', $order->id);
+        session()->put('approvalId', $order->id);//temporally saving the order id
 
         return redirect($approve->href);
     }
@@ -112,18 +117,18 @@ class PayPalService
         return $this->makeRequest(
             'POST',
             '/v2/checkout/orders',
-            [],
-            [
+            [],//query params
+            [//body
                 'intent' => 'CAPTURE',
                 'purchase_units' => [
-                    0 => [
+                    0 => [//an array with only one element
                         'amount' => [
                             'currency_code' =>strtoupper($currency),
                             'value' => round($value * $factor = $this->resolveFactor($currency)) / $factor,
                         ]
                     ]
                 ],
-                'application_context' => [
+                'application_context' => [//this will json
                     'brand_name' => config('app.name'),
                     'shipping_preference' => 'NO_SHIPPING',
                     'user_action' => 'PAY_NOW',
@@ -131,7 +136,7 @@ class PayPalService
                     'cancel_url' => route('cancelled'),
                 ]
             ],
-            [],
+            [],//headers
             $isJsonRequest = true,
         );
     }
@@ -141,9 +146,9 @@ class PayPalService
         return $this->makeRequest(
             'POST',
             "/v2/checkout/orders/{$approvalId}/capture",
-            [],
-            [],
-            [
+            [],//query
+            [],//body
+            [//header
                 'Content-Type' => 'application/json'
             ],
         );

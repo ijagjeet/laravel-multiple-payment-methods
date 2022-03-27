@@ -14,7 +14,7 @@ class PaymentController extends Controller
      *
      * @return void
      */
-    public function __construct(PaymentPlatformResolver $paymentPlatformResolver)
+    public function __construct(PaymentPlatformResolver $paymentPlatformResolver)//injecting
     {
         $this->middleware('auth');
 
@@ -26,7 +26,7 @@ class PaymentController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function pay(Request $request)
+    public function pay(Request $request)//step 1
     {
         $rules = [
             'value' => ['required', 'numeric', 'min:5'],
@@ -34,12 +34,12 @@ class PaymentController extends Controller
             'payment_platform' => ['required', 'exists:payment_platforms,id'],
         ];
 
+        //validate the request against those rules
         $request->validate($rules);
 
-        $paymentPlatform = $this->paymentPlatformResolver
-            ->resolveService($request->payment_platform);
+        $paymentPlatform = $this->paymentPlatformResolver->resolveService($request->payment_platform);
 
-        session()->put('paymentPlatformId', $request->payment_platform);
+        session()->put('paymentPlatformId', $request->payment_platform);//put in session
 
         if ($request->user()->hasActiveSubscription()) {
             $request->value = round($request->value * 0.9, 2);
@@ -48,11 +48,11 @@ class PaymentController extends Controller
         return $paymentPlatform->handlePayment($request);
     }
 
-    public function approval()
+    public function approval()//step 2
     {
         if (session()->has('paymentPlatformId')) {
             $paymentPlatform = $this->paymentPlatformResolver
-                ->resolveService(session()->get('paymentPlatformId'));
+                ->resolveService(session()->get('paymentPlatformId'));//not resolved from the request but from the session
 
             return $paymentPlatform->handleApproval();
         }
