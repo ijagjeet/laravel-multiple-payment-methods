@@ -29,9 +29,8 @@
     }
 </style>
 @endpush
-<label class="mt-3" for="card-element">
-    Card details:
-</label>
+
+<label class="mt-3" for="card-element">Card details:</label>
 
 <div id="cardElement"></div>
 
@@ -55,7 +54,8 @@
     const payButton = document.getElementById('payButton');
 
     payButton.addEventListener('click', async(e) => {
-        if (form.elements.payment_platform.value === "{{ $paymentPlatform->id }}") {
+
+        if (form.elements.payment_platform.value === "{{ $paymentPlatform->id }}") {//is this stripe
             e.preventDefault();
 
             const { paymentMethod, error } = await stripe.createPaymentMethod(

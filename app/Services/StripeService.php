@@ -22,9 +22,10 @@ class StripeService
         $this->plans = config('services.stripe.plans');
     }
 
-    public function resolveAuthorization(&$queryParams, &$formParams, &$headers)
+    //UTILITY FUNCTIONS
+    public function resolveAccessToken()
     {
-        $headers['Authorization'] = $this->resolveAccessToken();
+        return "Bearer {$this->secret}";//using a Bear
     }
 
     public function decodeResponse($response)
@@ -32,10 +33,23 @@ class StripeService
         return json_decode($response);
     }
 
-    public function resolveAccessToken()
+    public function resolveFactor($currency)
     {
-        return "Bearer {$this->secret}";
+        $zeroDecimalCurrencies = ['JPY'];
+
+        if (in_array(strtoupper($currency), $zeroDecimalCurrencies)) {
+            return 1;
+        }
+
+        return 100;
     }
+    //END OF UTILITY FUNCTIONS
+
+    public function resolveAuthorization(&$queryParams, &$formParams, &$headers)
+    {
+        $headers['Authorization'] = $this->resolveAccessToken();
+    }
+
 
     public function handlePayment(Request $request)
     {
@@ -48,6 +62,21 @@ class StripeService
         session()->put('paymentIntentId', $intent->id);
 
         return redirect()->route('approval');
+    }
+
+    public function createIntent($value, $currency, $paymentMethod)
+    {
+        return $this->makeRequest(
+            'POST',
+            '/v1/payment_intents',
+            [],
+            [
+                'amount' => round($value * $this->resolveFactor($currency)),
+                'currency' => strtolower($currency),
+                'payment_method' => $paymentMethod,
+                'confirmation_method' => 'manual',
+            ],
+        );
     }
 
     public function handleApproval()
@@ -67,7 +96,7 @@ class StripeService
             }
 
             if ($confirmation->status === 'succeeded') {
-                $name = $confirmation->charges->data[0]->billing_details->name;
+                $name = $confirmation->charges->data[0]->billing_details->name;//name of user
                 $currency = strtoupper($confirmation->currency);
                 $amount = $confirmation->amount / $this->resolveFactor($currency);
 
@@ -80,6 +109,14 @@ class StripeService
         return redirect()
             ->route('home')
             ->withErrors('We are unable to confirm your payment. Try again, please');
+    }
+
+    public function confirmPayment($paymentIntentId)
+    {
+        return $this->makeRequest(
+            'POST',
+            "/v1/payment_intents/{$paymentIntentId}/confirm",
+        );
     }
 
     public function handleSubscription(Request $request)
@@ -123,43 +160,7 @@ class StripeService
 
         return redirect()
             ->route('subscribe.show')
-            ->withErrors('We were unable to activate the subscrption. Try again, please.');
-    }
-
-    public function validateSubscription(Request $request)
-    {
-        if (session()->has('subscriptionId')) {
-            $subscriptionId = session()->get('subscriptionId');
-
-            session()->forget('subscriptionId');
-
-            return $request->subscription_id == $subscriptionId;
-        }
-
-        return false;
-    }
-
-    public function createIntent($value, $currency, $paymentMethod)
-    {
-        return $this->makeRequest(
-            'POST',
-            '/v1/payment_intents',
-            [],
-            [
-                'amount' => round($value * $this->resolveFactor($currency)),
-                'currency' => strtolower($currency),
-                'payment_method' => $paymentMethod,
-                'confirmation_method' => 'manual',
-            ],
-        );
-    }
-
-    public function confirmPayment($paymentIntentId)
-    {
-        return $this->makeRequest(
-            'POST',
-            "/v1/payment_intents/{$paymentIntentId}/confirm",
-        );
+            ->withErrors('We were unable to activate the subscription. Try again, please.');
     }
 
     public function createCustomer($name, $email, $paymentMethod)
@@ -193,15 +194,17 @@ class StripeService
         );
     }
 
-    public function resolveFactor($currency)
+    public function validateSubscription(Request $request)
     {
-        $zeroDecimalCurrencies = ['JPY'];
+        if (session()->has('subscriptionId')) {
+            $subscriptionId = session()->get('subscriptionId');
 
-        if (in_array(strtoupper($currency), $zeroDecimalCurrencies)) {
-            return 1;
+            session()->forget('subscriptionId');
+
+            return $request->subscription_id == $subscriptionId;
         }
 
-        return 100;
+        return false;
     }
 
 }

@@ -22,6 +22,7 @@ class PayPalService
         $this->plans = config('services.paypal.plans');
     }
 
+    //UTILITY FUNCTIONS
     public function resolveAccessToken()
     {
         $credentials = base64_encode("{$this->clientId}:{$this->clientSecret}");
@@ -33,6 +34,18 @@ class PayPalService
     {
         return json_decode($response);
     }
+
+    public function resolveFactor($currency)
+    {
+        $zeroDecimalCurrencies = ['JPY'];
+
+        if (in_array(strtoupper($currency), $zeroDecimalCurrencies)) {
+            return 1;
+        }
+
+        return 100;
+    }
+    //END OF UTILITY FUNCTIONS
 
     /*
      * we need to pass them by reference.
@@ -46,7 +59,6 @@ class PayPalService
         $headers['Authorization'] = $this->resolveAccessToken();
     }
 
-
     public function handlePayment(Request $request)
     {
         $order = $this->createOrder($request->value, $request->currency);
@@ -58,58 +70,6 @@ class PayPalService
         session()->put('approvalId', $order->id);//temporally saving the order id
 
         return redirect($approve->href);
-    }
-
-    public function handleApproval()
-    {
-        if (session()->has('approvalId')) {
-            $approvalId = session()->get('approvalId');
-
-            $payment = $this->capturePayment($approvalId);
-
-            $name = $payment->payer->name->given_name;
-            $payment = $payment->purchase_units[0]->payments->captures[0]->amount;
-            $amount = $payment->value;
-            $currency = $payment->currency_code;
-
-            return redirect()
-                ->route('home')
-                ->withSuccess(['payment' => "Thanks, {$name}. We received your {$amount}{$currency} payment."]);
-        }
-
-        return redirect()
-            ->route('home')
-            ->withErrors('We cannot capture the payment. Try again, please');
-    }
-
-    public function handleSubscription(Request $request)
-    {
-        $subscription = $this->createSubscription(
-            $request->plan,
-            $request->user()->name,
-            $request->user()->email,
-        );
-
-        $subscriptionLinks = collect($subscription->links);
-
-        $approve = $subscriptionLinks->where('rel', 'approve')->first();
-
-        session()->put('subscriptionId', $subscription->id);
-
-        return redirect($approve->href);
-    }
-
-    public function validateSubscription(Request $request)
-    {
-        if (session()->has('subscriptionId')) {
-            $subscriptionId = session()->get('subscriptionId');
-
-            session()->forget('subscriptionId');
-
-            return $request->subscription_id == $subscriptionId;
-        }
-
-        return false;
     }
 
     public function createOrder($value, $currency)
@@ -141,6 +101,28 @@ class PayPalService
         );
     }
 
+    public function handleApproval()
+    {
+        if (session()->has('approvalId')) {
+            $approvalId = session()->get('approvalId');
+
+            $payment = $this->capturePayment($approvalId);
+
+            $name = $payment->payer->name->given_name;
+            $payment = $payment->purchase_units[0]->payments->captures[0]->amount;
+            $amount = $payment->value;
+            $currency = $payment->currency_code;
+
+            return redirect()
+                ->route('home')
+                ->withSuccess(['payment' => "Thanks, {$name}. We received your {$amount}{$currency} payment."]);
+        }
+
+        return redirect()
+            ->route('home')
+            ->withErrors('We cannot capture the payment. Try again, please');
+    }
+
     public function capturePayment($approvalId)
     {
         return $this->makeRequest(
@@ -152,6 +134,23 @@ class PayPalService
                 'Content-Type' => 'application/json'
             ],
         );
+    }
+
+    public function handleSubscription(Request $request)
+    {
+        $subscription = $this->createSubscription(
+            $request->plan,
+            $request->user()->name,
+            $request->user()->email,
+        );
+
+        $subscriptionLinks = collect($subscription->links);
+
+        $approve = $subscriptionLinks->where('rel', 'approve')->first();
+
+        session()->put('subscriptionId', $subscription->id);
+
+        return redirect($approve->href);
     }
 
     public function createSubscription($planSlug, $name, $email)
@@ -181,15 +180,17 @@ class PayPalService
         );
     }
 
-    public function resolveFactor($currency)
+    public function validateSubscription(Request $request)
     {
-        $zeroDecimalCurrencies = ['JPY'];
+        if (session()->has('subscriptionId')) {
+            $subscriptionId = session()->get('subscriptionId');
 
-        if (in_array(strtoupper($currency), $zeroDecimalCurrencies)) {
-            return 1;
+            session()->forget('subscriptionId');
+
+            return $request->subscription_id == $subscriptionId;
         }
 
-        return 100;
+        return false;
     }
 
 }
