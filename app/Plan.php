@@ -15,7 +15,8 @@ class Plan extends Model
 
     public function subscriptions()
     {
-        return $this->hasMany(Subscription::class);
+        //a plan has many subscriptions
+        return $this->hasMany(Subscription::class);//one to many
     }
 
     public function getVisualPriceAttribute()

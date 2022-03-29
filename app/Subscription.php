@@ -14,6 +14,7 @@ class Subscription extends Model
         'plan_id'
     ];
 
+    //date casts
     protected $dates = [
         'active_until',
     ];
@@ -30,6 +31,6 @@ class Subscription extends Model
 
     public function isActive()
     {
-        return $this->active_until->gt(now());
+        return $this->active_until->gt(now());//greater than current
     }
 }
