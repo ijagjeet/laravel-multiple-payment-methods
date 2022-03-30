@@ -38,8 +38,7 @@ class SubscriptionController extends Controller
 
         $request->validate($rules);
 
-        $paymentPlatform = $this->paymentPlatformResolver
-            ->resolveService($request->payment_platform);
+        $paymentPlatform = $this->paymentPlatformResolver->resolveService($request->payment_platform);
 
         session()->put('subscriptionPlatformId', $request->payment_platform);
 
@@ -54,11 +53,12 @@ class SubscriptionController extends Controller
 
         $request->validate($rules);
 
-        if (session()->has('subscriptionPlatformId')) {
-            $paymentPlatform = $this->paymentPlatformResolver
-                ->resolveService(session()->get('subscriptionPlatformId'));
+        if (session()->has('subscriptionPlatformId')) {//atleast started the payment process for
+
+            $paymentPlatform = $this->paymentPlatformResolver->resolveService(session()->get('subscriptionPlatformId'));
 
             if ($paymentPlatform->validateSubscription($request)) {
+
                 $plan = Plan::where('slug', $request->plan)->firstOrFail();
                 $user = $request->user();
 
@@ -71,7 +71,9 @@ class SubscriptionController extends Controller
                 return redirect()
                     ->route('home')
                     ->withSuccess(['payment' => "Thanks, {$user->name}. You have now a {$plan->slug} subscription. Start using it now."]);
+
             }
+
         }
 
         return redirect()

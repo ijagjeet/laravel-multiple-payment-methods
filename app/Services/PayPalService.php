@@ -138,19 +138,15 @@ class PayPalService
 
     public function handleSubscription(Request $request)
     {
-        $subscription = $this->createSubscription(
-            $request->plan,
-            $request->user()->name,
-            $request->user()->email,
-        );
+        $subscription = $this->createSubscription($request->plan, $request->user()->name,$request->user()->email,);
 
-        $subscriptionLinks = collect($subscription->links);
+        $subscriptionLinks = collect($subscription->links);//links are returned in the response and then convert to collection
 
-        $approve = $subscriptionLinks->where('rel', 'approve')->first();
+        $approve = $subscriptionLinks->where('rel', 'approve')->first();//obtain the approve link
 
         session()->put('subscriptionId', $subscription->id);
 
-        return redirect($approve->href);
+        return redirect($approve->href);//redirect the user to the link that was returned in the response
     }
 
     public function createSubscription($planSlug, $name, $email)
@@ -160,14 +156,14 @@ class PayPalService
             '/v1/billing/subscriptions',
             [],
             [
-                'plan_id' => $this->plans[$planSlug],
+                'plan_id' => $this->plans[$planSlug],//or you can receive the plan id directly
                 'subscriber' => [
                     'name' => [
                         'given_name' => $name,
                     ],
                     'email_address' => $email
                 ],
-                'application_context' => [
+                'application_context' => [//customizes the payer experience during the subscription approval process with PayPal
                     'brand_name' => config('app.name'),
                     'shipping_preference' => 'NO_SHIPPING',
                     'user_action' => 'SUBSCRIBE_NOW',
@@ -185,7 +181,7 @@ class PayPalService
         if (session()->has('subscriptionId')) {
             $subscriptionId = session()->get('subscriptionId');
 
-            session()->forget('subscriptionId');
+            session()->forget('subscriptionId');//ensure that it can not be used later
 
             return $request->subscription_id == $subscriptionId;
         }

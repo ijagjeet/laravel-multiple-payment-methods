@@ -15,6 +15,7 @@ class Unsubscribed
      */
     public function handle($request, Closure $next)
     {
+        //check if the user has an active subscription
         if (optional($request->user())->hasActiveSubscription()) {
             return redirect()->route('home');
         }
