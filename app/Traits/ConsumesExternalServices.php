@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use GuzzleHttp\Client;
+use Psr\Http\Message\ResponseInterface;
 
 /*
  * And this time, we need to add the possibility to send any HTTP request to any service.
@@ -14,7 +15,14 @@ easily HTTP request with different methods, different URLs, different components
 trait ConsumesExternalServices
 {
     // to make a request,we need a lot of different options that we can use to customize these as much as possible
-    public function makeRequest($method, $requestUrl, $queryParams = [], $formParams = [], $headers = [], $isJsonRequest = false)
+    public function makeRequest(
+        $method, 
+        $requestUrl, 
+        $queryParams = [], 
+        $formParams = [], 
+        $headers = [], 
+        $isJsonRequest = false
+    ): ResponseInterface
     {
         $client = new Client([
             'base_uri' => $this->baseUri,

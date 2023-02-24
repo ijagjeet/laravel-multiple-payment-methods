@@ -15,7 +15,7 @@ class PaymentPlatformResolver
 
     public function resolveService($paymentPlatformId)
     {
-        $name = strtolower($this->paymentPlatforms->firstWhere('id', $paymentPlatformId)->name);
+        $name = strtolower($this->paymentPlatforms->firstWhere('id', $paymentPlatformId)->name ?? '');
 
         //using the retrieved name to retrieve a configuration file
         $service = config("services.{$name}.class");
